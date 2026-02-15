@@ -1,0 +1,9 @@
+.vscode/*
+.DS_Store
+
+# Build files
+build/
+CMakeFiles/
+
+.ccls-cache
+__pycache__
