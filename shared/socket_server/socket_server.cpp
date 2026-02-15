@@ -7,7 +7,7 @@
 sockaddr_in buildServerAddress(int port) {
     sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    server_add.sin_addr = INADDR_ANY;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(port);
     return server_addr;
 }

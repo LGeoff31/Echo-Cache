@@ -27,70 +27,66 @@ CommandType getCommandType(std::string command) {
     if (separator_index == -1) {
         return CommandType::other;
     }
-    std::string command_type_str = command.substr(0, separator_index);
-    switch (command_type_str) {
-        case "set": return CommandType::set;
-        case "get": return CommandType::get;
-        case "del": return CommandType::del;
-        default: return CommandType::other;
-    }
+    std::string commandTypeString = command.substr(0, separator_index);
+    if (commandTypeString == "get") return CommandType::get;
+    if (commandTypeString == "del") return CommandType::del;
+    if (commandTypeString == "set") return CommandType::set;
+    return CommandType::other;
 }
 
 ParsedSetRequest parseSet(std::string command) {
     int first_separator_index = find_separator(command, 0);
     if (first_separator_index == -1) {
-        return ParsedSetRequest{ false, "", ""};
+        return {false, "", ""};
     }
     
     int second_separator_index = find_separator(command, first_separator_index + 2);
     if (second_separator_index == -1) {
-        return ParsedSetRequest{ false, "", ""};
+        return {false, "", ""};
     }
 
-    return {true, command.substr(first_separator_index + 2, second_separator_index - first_separator_index - 2), command.substr(second_separator_index + 2)};
+    int key_start = first_separator_index + 2;
+    int key_length = second_separator_index - key_start;
+    int val_start = second_separator_index + 2;
+    int val_length = command.length() - val_start;
+
+    return {true, command.substr(key_start, key_length), command.substr(val_start, val_length)};
 }
 
 ParsedGetRequest parseGet(std::string command) {
     int separator_index = find_separator(command, 0);
     if (separator_index == -1) {
-        return {"", false};
+        return {false, ""};
     }
-    std::string key = command.substr(separator_index + 2);
-    return ParsedGetRequest{ true, key };
+    int key_start = separator_index + 2;
+    int key_length = command.length() - key_start;
+    return {true, command.substr(key_start, key_length)};
 }
 
-ParsedDeleteRequest parseDelete(std::string command) {
+ParsedDelRequest parseDel(std::string command) {
     int separator_index = find_separator(command, 0);
     if (separator_index == -1) {
-        return {"", false};
+        return {false, ""};
     }
-    std::string key = command.substr(separator_index + 2);
-    return ParsedDeleteRequest{ true, key };
+    int key_start = separator_index + 2;
+    int key_length = command.length() - key_start;
+    return {true, command.substr(key_start, key_length)};
 }
 
 ParsedKey parseKey(std::string command) {
     CommandType commandType = getCommandType(command);
-    switch (commandType) {
-        case CommandType::set:
-            ParsedSetRequest parsedSetRequest = parseSet(command);
-            if (parsedSetRequest.success) {
-                return {true, parsedSetRequest.key};
-            }
-            break;
-        case CommandType::get:
-            ParsedGetRequest parsedGetRequest = parseGet(command);
-            if (parsedGetRequest.success) {
-                return {true, parsedGetRequest.key};
-            }
-            break;
-        case CommandType::del:
-            ParsedDeleteRequest parsedDeleteRequest = parseDelete(command);
-            if (parsedDeleteRequest.success) {
-                return {true, parsedDeleteRequest.key};
-            }
-            break;
-        default:
-            break;
+
+    if (commandType == CommandType::get) {
+        ParsedGetRequest req = parseGet(command);
+        if (req.success) return {true, req.key};
+    }
+    if (commandType == CommandType::del) {
+        ParsedDelRequest req = parseDel(command);
+        if (req.success) return {true, req.key};
+    }
+    if (commandType == CommandType::set) {
+        ParsedSetRequest req = parseSet(command);
+        if (req.success) return {true, req.key};
     }
     return {false, ""};
 }
