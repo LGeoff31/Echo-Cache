@@ -141,7 +141,7 @@ Some common use cases are:
 
 ## Architecture
 
-![Architecture](architecture.png)
+<img width="2400" height="1928" alt="architecture" src="https://github.com/user-attachments/assets/f5a65d0e-77e6-4075-9809-ea7d6104c9c1" />
 
 ### Worker
 
