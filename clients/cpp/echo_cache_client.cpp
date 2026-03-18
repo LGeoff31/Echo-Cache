@@ -75,6 +75,96 @@ bool RemoteCache::del(const std::string& key) {
     return false;
 }
 
+HandlerResponse RemoteCache::incr(const std::string& key, int delta) {
+    int retriesLeft = this->maxRetries;
+    while (retriesLeft >= 1) {
+        try {
+            this->client->sendMessage("incr||" + key + "||" + std::to_string(delta));
+            std::string response = this->client->receiveResponse();
+            if (response.empty()) {
+                throw std::runtime_error("bad connection");
+            }
+            return parseResponseString(response);
+        } catch (...) {
+            this->reestablishConnection();
+        }
+        --retriesLeft;
+    }
+    return {StatusCode::unexpectedError, ""};
+}
+
+HandlerResponse RemoteCache::decr(const std::string& key, int delta) {
+    int retriesLeft = this->maxRetries;
+    while (retriesLeft >= 1) {
+        try {
+            this->client->sendMessage("decr||" + key + "||" + std::to_string(delta));
+            std::string response = this->client->receiveResponse();
+            if (response.empty()) {
+                throw std::runtime_error("bad connection");
+            }
+            return parseResponseString(response);
+        } catch (...) {
+            this->reestablishConnection();
+        }
+        --retriesLeft;
+    }
+    return {StatusCode::unexpectedError, ""};
+}
+
+HandlerResponse RemoteCache::append(const std::string& key, const std::string& value) {
+    int retriesLeft = this->maxRetries;
+    while (retriesLeft >= 1) {
+        try {
+            this->client->sendMessage("append||" + key + "||" + value);
+            std::string response = this->client->receiveResponse();
+            if (response.empty()) {
+                throw std::runtime_error("bad connection");
+            }
+            return parseResponseString(response);
+        } catch (...) {
+            this->reestablishConnection();
+        }
+        --retriesLeft;
+    }
+    return {StatusCode::unexpectedError, ""};
+}
+
+HandlerResponse RemoteCache::exists(const std::string& key) {
+    int retriesLeft = this->maxRetries;
+    while (retriesLeft >= 1) {
+        try {
+            this->client->sendMessage("exists||" + key);
+            std::string response = this->client->receiveResponse();
+            if (response.empty()) {
+                throw std::runtime_error("bad connection");
+            }
+            return parseResponseString(response);
+        } catch (...) {
+            this->reestablishConnection();
+        }
+        --retriesLeft;
+    }
+    return {StatusCode::unexpectedError, ""};
+}
+
+HandlerResponse RemoteCache::scan(const std::string& prefix, int limit) {
+    int retriesLeft = this->maxRetries;
+    while (retriesLeft >= 1) {
+        try {
+            this->client->sendMessage("scan||" + prefix + "||" + std::to_string(limit));
+            std::string response = this->client->receiveResponse();
+            if (response.empty()) {
+                throw std::runtime_error("bad connection");
+            }
+            return parseResponseString(response);
+        } catch (...) {
+            this->reestablishConnection();
+        }
+        --retriesLeft;
+    }
+    return {StatusCode::unexpectedError, ""};
+}
+
 void RemoteCache::reestablishConnection() {
     this->closeConnection();
     this->establishConnection();

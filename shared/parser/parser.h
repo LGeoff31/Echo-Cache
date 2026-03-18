@@ -19,6 +19,24 @@ struct ParsedDelRequest {
     std::string key;
 };
 
+struct ParsedScanRequest {
+    bool success;
+    std::string prefix;
+    int limit;
+};
+
+struct ParsedIncrRequest {
+    bool success;
+    std::string key;
+    int delta;
+};
+
+struct ParsedAppendRequest {
+    bool success;
+    std::string key;
+    std::string value;
+};
+
 struct ParsedKey {
     bool success;
     std::string key;
@@ -28,7 +46,12 @@ enum CommandType {
     other = 0,
     set = 1,
     get = 2,
-    del = 3
+    del = 3,
+    scan = 4,
+    incr = 5,
+    decr = 6,
+    append = 7,
+    exists = 8
 };
 
 enum StatusCode {
@@ -36,7 +59,8 @@ enum StatusCode {
     parsingFailure = 1,
     keyNotFound = 2,
     invalidCommand = 3,
-    unexpectedError = 4
+    unexpectedError = 4,
+    notInteger = 5
 };
 
 struct HandlerResponse {
@@ -57,6 +81,21 @@ ParsedGetRequest parseGet(std::string command);
 
 // del||name -> {true, name}
 ParsedDelRequest parseDel(std::string command);
+
+// scan||prefix||limit -> {true, prefix, limit}
+ParsedScanRequest parseScan(std::string command);
+
+// incr||key||delta -> {true, key, delta}
+ParsedIncrRequest parseIncr(std::string command);
+
+// decr||key||delta -> {true, key, delta}
+ParsedIncrRequest parseDecr(std::string command);
+
+// append||key||value -> {true, key, value}
+ParsedAppendRequest parseAppend(std::string command);
+
+// exists||key -> {true, key}
+ParsedGetRequest parseExists(std::string command);
 
 // name -> {true, name}
 ParsedKey parseKey(std::string command);

@@ -11,7 +11,12 @@ void printCommandList() {
     std::cout << " 1. set <key> <value>" << std::endl;
     std::cout << " 2. get <key>" << std::endl;
     std::cout << " 3. del <key>" << std::endl;
-    std::cout << " 4. quit" << std::endl;
+    std::cout << " 4. incr <key> [delta]" << std::endl;
+    std::cout << " 5. decr <key> [delta]" << std::endl;
+    std::cout << " 6. append <key> <value>" << std::endl;
+    std::cout << " 7. exists <key>" << std::endl;
+    std::cout << " 8. scan <prefix> [limit]" << std::endl;
+    std::cout << " 9. quit" << std::endl;
 }
 
 int main(int argc, char **argv) {
@@ -56,6 +61,37 @@ int main(int argc, char **argv) {
             } else {
                 std::cout << "Failure" << std::endl;
             }
+        } else if (command == "incr") {
+            std::string key;
+            std::cin >> key;
+            int delta = 1;
+            if (std::cin.peek() != '\n') std::cin >> delta;
+            HandlerResponse response = remoteCache.incr(key, delta);
+            std::cout << "Response (" << (int)response.statusCode << "): '" << response.result << "'" << std::endl;
+        } else if (command == "decr") {
+            std::string key;
+            std::cin >> key;
+            int delta = 1;
+            if (std::cin.peek() != '\n') std::cin >> delta;
+            HandlerResponse response = remoteCache.decr(key, delta);
+            std::cout << "Response (" << (int)response.statusCode << "): '" << response.result << "'" << std::endl;
+        } else if (command == "append") {
+            std::string key, value;
+            std::cin >> key >> value;
+            HandlerResponse response = remoteCache.append(key, value);
+            std::cout << "Response (" << (int)response.statusCode << "): '" << response.result << "'" << std::endl;
+        } else if (command == "exists") {
+            std::string key;
+            std::cin >> key;
+            HandlerResponse response = remoteCache.exists(key);
+            std::cout << "Exists: " << (response.result == "1" ? "yes" : "no") << std::endl;
+        } else if (command == "scan") {
+            std::string prefix;
+            std::cin >> prefix;
+            int limit = 100;
+            if (std::cin.peek() != '\n') std::cin >> limit;
+            HandlerResponse response = remoteCache.scan(prefix, limit);
+            std::cout << "Keys: " << (response.result.empty() ? "(none)" : response.result) << std::endl;
         } else if (command == "quit") {
             remoteCache.initiateAndCloseConnection();
             break;

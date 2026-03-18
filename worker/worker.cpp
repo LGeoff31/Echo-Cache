@@ -42,6 +42,46 @@ HandlerResponse handleRequest(char *buff, Cache &cache) {
         } else {
             return cache.del(delRequest.key);
         }
+    } else if (commandType == CommandType::scan) {
+        ParsedScanRequest scanRequest = parseScan(command);
+        if (scanRequest.success == false) {
+            return {StatusCode::parsingFailure,
+                    "Could not parse scan request: '" + command + "'"};
+        } else {
+            return cache.scan(scanRequest.prefix, scanRequest.limit);
+        }
+    } else if (commandType == CommandType::incr) {
+        ParsedIncrRequest incrRequest = parseIncr(command);
+        if (incrRequest.success == false) {
+            return {StatusCode::parsingFailure,
+                    "Could not parse incr request: '" + command + "'"};
+        } else {
+            return cache.incr(incrRequest.key, incrRequest.delta);
+        }
+    } else if (commandType == CommandType::decr) {
+        ParsedIncrRequest decrRequest = parseDecr(command);
+        if (decrRequest.success == false) {
+            return {StatusCode::parsingFailure,
+                    "Could not parse decr request: '" + command + "'"};
+        } else {
+            return cache.incr(decrRequest.key, decrRequest.delta);
+        }
+    } else if (commandType == CommandType::append) {
+        ParsedAppendRequest appendRequest = parseAppend(command);
+        if (appendRequest.success == false) {
+            return {StatusCode::parsingFailure,
+                    "Could not parse append request: '" + command + "'"};
+        } else {
+            return cache.append(appendRequest.key, appendRequest.value);
+        }
+    } else if (commandType == CommandType::exists) {
+        ParsedGetRequest existsRequest = parseExists(command);
+        if (existsRequest.success == false) {
+            return {StatusCode::parsingFailure,
+                    "Could not parse exists request: '" + command + "'"};
+        } else {
+            return cache.exists(existsRequest.key);
+        }
     } else {
         return {StatusCode::invalidCommand,
                 "Invalid command type: '" + command + "'"};

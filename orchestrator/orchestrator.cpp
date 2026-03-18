@@ -11,6 +11,8 @@
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <set>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -82,13 +84,50 @@ void handleClient(CommandLineArguments commandLineArguments, int connection,
         std::lock_guard<std::mutex> lock(clientConnectionsMutex);
         clientConnections[id].lastUsed = getCurrentTime();
 
-        // Hash the key to pick 2 workers
+        // Hash the key to pick 2 workers (not used for scan - it broadcasts to all)
         int workerIndex1 = hashKey(parsedKey.key, commandLineArguments.numWorkers);
         int workerIndex2 = (workerIndex1 + 1) % commandLineArguments.numWorkers;
         IpAndPort workerIpAndPort1 = commandLineArguments.workers[workerIndex1];
         IpAndPort workerIpAndPort2 = commandLineArguments.workers[workerIndex2];
 
-        if (commandType == CommandType::set) {
+        if (commandType == CommandType::scan) {
+            // Broadcast to all workers and merge results
+            ParsedScanRequest scanReq = parseScan(command);
+            if (!scanReq.success) break;
+            std::set<std::string> allKeys;
+            for (int i = 0; i < commandLineArguments.numWorkers; i++) {
+                std::string response = handleRequest(
+                    recv_buf, commandLineArguments.workers[i].ip,
+                    commandLineArguments.workers[i].port);
+                if (!response.empty()) {
+                    HandlerResponse parsed = parseResponseString(response);
+                    if (parsed.statusCode == StatusCode::success && !parsed.result.empty()) {
+                        std::string s = parsed.result;
+                        size_t pos = 0;
+                        while (pos < s.size()) {
+                            size_t next = s.find("||", pos);
+                            if (next == std::string::npos) {
+                                allKeys.insert(s.substr(pos));
+                                break;
+                            }
+                            allKeys.insert(s.substr(pos, next - pos));
+                            pos = next + 2;
+                        }
+                    }
+                }
+            }
+            // Build merged result, limit to scanReq.limit
+            std::string merged;
+            int count = 0;
+            for (const auto& k : allKeys) {
+                if (count >= scanReq.limit) break;
+                if (count > 0) merged += "||";
+                merged += k;
+                count++;
+            }
+            std::string responseStr = formatResponseString({StatusCode::success, merged});
+            send(connection, responseStr.c_str(), responseStr.size(), 0);
+        } else if (commandType == CommandType::set) {
             // Write to BOTH workers (replication)
             std::string response1 =
             handleRequest(recv_buf, workerIpAndPort1.ip, workerIpAndPort1.port);
@@ -128,6 +167,29 @@ void handleClient(CommandLineArguments commandLineArguments, int connection,
             send(connection, response1.c_str(), response1.size(), 0);
             if (responseCode == -1) {
                 perror("send");
+            }
+        } else if (commandType == CommandType::incr ||
+                   commandType == CommandType::decr ||
+                   commandType == CommandType::append) {
+            // Write to BOTH workers
+            std::string response1 =
+                handleRequest(recv_buf, workerIpAndPort1.ip, workerIpAndPort1.port);
+            std::string response2 =
+                handleRequest(recv_buf, workerIpAndPort2.ip, workerIpAndPort2.port);
+            int responseCode = send(connection, response1.c_str(), response1.size(), 0);
+            if (responseCode == -1) {
+                perror("send");
+            }
+        } else if (commandType == CommandType::exists) {
+            // Try worker 1 first, fallback to worker 2
+            std::string response1 =
+                handleRequest(recv_buf, workerIpAndPort1.ip, workerIpAndPort1.port);
+            if (!response1.empty()) {
+                send(connection, response1.c_str(), response1.size(), 0);
+            } else {
+                std::string response2 =
+                    handleRequest(recv_buf, workerIpAndPort2.ip, workerIpAndPort2.port);
+                send(connection, response2.c_str(), response2.size(), 0);
             }
         }
     }

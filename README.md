@@ -67,6 +67,19 @@ make
 
 4. Run the client program. You can also run the CLI tool for testing as shown here.
 
+### Supported Operations
+
+| Command | Format (fields separated by `\|\|`) | Description |
+|---------|-------------------------------------|-------------|
+| `set` | `set` `key` `value` | Store a key-value pair |
+| `get` | `get` `key` | Retrieve a value by key |
+| `del` | `del` `key` | Delete a key |
+| `incr` | `incr` `key` `delta` | Atomically increment an integer value |
+| `decr` | `decr` `key` `delta` | Atomically decrement an integer value |
+| `append` | `append` `key` `value` | Append to a string value |
+| `exists` | `exists` `key` | Check if a key exists (returns "1" or "0") |
+| `scan` | `scan` `prefix` `limit` | List keys matching a prefix, up to `limit` results |
+
 ```bash
 # In shell 4
 ./build/clients/commandline <orchestrator ip> <orchestrator port>
@@ -87,13 +100,36 @@ make
 Type a command:
  1. set <key> <value>
  2. get <key>
- 3. quit
+ 3. del <key>
+ 4. incr <key> [delta]
+ 5. decr <key> [delta]
+ 6. append <key> <value>
+ 7. exists <key>
+ 8. scan <prefix> [limit]
+ 9. quit
 
 >>> set name geoffrey
 Success
 
 >>> get name
 Response (0): 'geoffrey'
+
+>>> set views 0
+Success
+
+>>> incr views 5
+Response (0): '5'
+
+>>> append log "user logged in\n"
+Response (0): '15'
+
+>>> exists name
+Exists: yes
+
+>>> set user:1 alice
+>>> set user:2 bob
+>>> scan user: 10
+Keys: user:1||user:2
 ```
 
 ### C++ Client Example
@@ -105,7 +141,25 @@ Response (0): 'geoffrey'
 int main() {
     RemoteCache client("127.0.0.1", 8000);
     client.set("name", "geoffrey");
-    std::cout << client.get("name") << std::endl; // prints "geoffrey"
+    std::cout << client.get("name").result << std::endl; // prints "geoffrey"
+
+    // Atomic counters
+    client.set("views", "0");
+    auto incrResp = client.incr("views", 5);
+    std::cout << "Views: " << incrResp.result << std::endl; // prints "5"
+
+    // Append to a value
+    client.append("log", "event1\n");
+
+    // Check if key exists
+    auto existsResp = client.exists("name");
+    std::cout << "Exists: " << (existsResp.result == "1" ? "yes" : "no") << std::endl;
+
+    // Prefix scan
+    client.set("user:1", "alice");
+    client.set("user:2", "bob");
+    auto scanResp = client.scan("user:", 100);
+    std::cout << "Keys: " << scanResp.result << std::endl; // prints "user:1||user:2"
 }
 ```
 
@@ -115,8 +169,15 @@ int main() {
 from echo_cache_client import RemoteCache
 
 client = RemoteCache("127.0.0.1", 8000)
-client.set("name", "geoffrey");
-print(client.get("name")) # prints "geoffrey"
+client.set("name", "geoffrey")
+print(client.get("name"))  # prints "geoffrey"
+
+# Atomic counters, append, exists, and scan are also supported
+client.set("views", "0")
+print(client.incr("views", 5))  # prints "5"
+client.append("log", "event1\n")
+print(client.exists("name"))    # prints "1" if exists, "0" otherwise
+print(client.scan("user:", 100))  # returns keys matching prefix
 ```
 
 ## Use cases

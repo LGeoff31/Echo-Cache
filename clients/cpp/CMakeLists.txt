@@ -4,6 +4,3 @@ find_library(libs NAMES SocketClient Parser)
 target_link_libraries(CppClient PRIVATE SocketClient Parser)
 
 target_include_directories(CppClient PUBLIC .)
-
-orchestrator
-orchestrator

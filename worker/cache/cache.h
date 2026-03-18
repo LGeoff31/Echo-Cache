@@ -13,6 +13,10 @@ public:
     HandlerResponse get(std::string key);
     HandlerResponse set(std::string key, std::string val);
     HandlerResponse del(std::string key);
+    HandlerResponse scan(std::string prefix, int limit);
+    HandlerResponse incr(std::string key, int delta);
+    HandlerResponse append(std::string key, std::string value);
+    HandlerResponse exists(std::string key);
 
 private:
     std::map<std::string, std::string>* table;
